@@ -25,3 +25,7 @@ wheels/
 .installed.cfg
 *.egg
 
+
+
+*.sublime-project
+*.sublime-workspace
