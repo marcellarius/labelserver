@@ -1,0 +1,31 @@
+printers:
+  garage:
+    type: "cognitive_lbt42"
+    hostname: "10.49.0.114"
+    port: 9100
+    label_types:
+      item_label: "labeltypes/item_label.yaml"
+      address_label:
+        name: "Test label"
+        schema:
+          id: {type: integer}
+          name: {type: string, default: "Foo"}
+          description: {type: string, default: ""}
+        template: |
+          ! 0 200 200 1
+          NOINDEX
+          PITCH 50
+          STRING 24X31 250 50 %(name)s
+          STRING 24X31 250 81 Foobar
+          PITCH 200
+          FILL_BOX 50 50 750 85
+          FILL_BOX 50 50 725 60
+          FILL_BOX 25 25 750 85
+          FILL_BOX 27 27 750 85
+          END
+
+  office:
+    type: "cognitive_lbt42"
+    device: "/dev/ttyUSB0"
+    label_types:
+      electronics_tray: "labeltypes/item_label.yaml"

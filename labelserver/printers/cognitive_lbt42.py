@@ -1,54 +1,41 @@
 from labelserver.printer import Printer, LabelType, Job
+from labelserver.transports import TCPTransport
+import labelserver.utils
+import time
 import yaml
 
-
 class CognitiveLbt42Printer(Printer):
-    def __init__(self, id, hostname, port, device):
+    default_config = {
+        "job_delay": 1,
+        "port": 9100
+    }
+
+    def __init__(self, id, config):
         super(CognitiveLbt42Printer, self).__init__()
         self.id = id
-        self.label_types = {}
-        self.hostname = hostname
-        self.port = port
-        self.device = device
+        self.config = config
 
-    def _add_label_type(self, label_type):
-        self.label_types[label_type.id] = label_type
+    def create_transport(self):
+        return TCPTransport(self.config["hostname"], self.config["port"])
+
+    def print(self, job):
+        with self.create_transport() as transport:
+            data = _convert_line_endings(job.data).encode("ascii")
+            transport.send(data)
+            transport.close()
+            time.sleep(self.config["job_delay"])
 
     @classmethod
-    def load_config(cls, id, printer_def):
-        hostname = printer_def.get("hostname")
-        port = printer_def.get("port", 9100)
-        device = printer_def.get("device")
+    def create(cls, id, config):
+        config = labelserver.utils.defaults(config, cls.default_config)
+        hostname = config.get("hostname")
+        port = config.get("port")
+        device = config.get("device")
 
         if not (hostname and port) and not device:
             raise Exception("Hostname/port or a serial device must be specified")
 
-        printer = cls(id, hostname, port, device)
+        return cls(id, config)
 
-        label_types = {}
-        for labeltype_id, labeltype_filename in printer_def.get("label-types", {}).items():
-            with open(labeltype_filename) as f:
-                labeltype_def = yaml.load(f)
-            printer._add_label_type(CognitiveLbt42LabelType.load_config(labeltype_id, printer, labeltype_def))
-        return printer
-
-
-class CognitiveLbt42LabelType(LabelType):
-    def __init__(self, id, printer, label_template):
-        self.id = id
-        self.printer = printer
-        self.label_template = label_template
-
-    def prepare(self, label_data):
-        pass
-
-    @classmethod
-    def load_config(cls, id, printer, labeltype_def):
-        template = labeltype_def.get("template")
-        return cls(id, printer, template)
-
-
-class CognitiveLbt42Job(Job):
-    def __init__(self, printer, label_type, compiled_label):
-        super(self, CognitiveLbt42Job).__init__(printer, label_type)
-
+def _convert_line_endings(data):
+    return data.replace("\n", "\r\n")
